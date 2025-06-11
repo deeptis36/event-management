@@ -14,9 +14,7 @@ class TalkProposalController extends Controller
      */
     public function index()
     {
-        // Example list of proposals by the authenticated speaker
-        $speaker = auth()->user()->speaker ?? abort(403);
-        $proposals = $speaker->talkProposals()->with('tags')->latest()->get();
+        $proposals = TalkProposal::with('speaker', 'tags')->paginate(10);
 
         return view('talk_proposals.index', compact('proposals'));
     }
@@ -42,8 +40,9 @@ class TalkProposalController extends Controller
             'tags.*' => 'string|max:50',
         ]);
 
-        $speaker = auth()->user()->speaker ?? abort(403);
-
+        // $speaker = auth()->user()->speaker ?? abort(403);
+        $speaker = auth()->user();
+        // dd($speaker);
         $talkProposal = new TalkProposal($request->only('title', 'description'));
         $talkProposal->speaker()->associate($speaker);
 
@@ -55,11 +54,14 @@ class TalkProposalController extends Controller
         $talkProposal->save();
 
         // Attach tags
+
         if ($request->filled('tags')) {
             $tagIds = [];
-            foreach ($request->tags as $tagName) {
+
+            $tags =  $request->tags;
+            foreach ($tags as $tagName) {
                 $tagName = trim(strtolower($tagName));
-                $tag = Tag::firstOrCreate(['name' => $tagName]);
+                $tag = Tag::firstOrCreate(['name' => $tagName, 'slug' => Tag::generateSlug($tagName)]);
                 $tagIds[] = $tag->id;
             }
             $talkProposal->tags()->sync($tagIds);
@@ -81,6 +83,7 @@ class TalkProposalController extends Controller
     public function show(string $id)
     {
         $talkProposal = TalkProposal::with(['tags', 'revisions', 'reviews'])->findOrFail($id);
+        // dd($talkProposal);
         return view('talk_proposals.show', compact('talkProposal'));
     }
 
@@ -98,8 +101,58 @@ class TalkProposalController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        // Implement update logic with revision tracking
+        $talkProposal = TalkProposal::with('tags')->findOrFail($id);
+
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'required|string',
+            'presentation_pdf' => 'nullable|file|mimes:pdf|max:10240',
+            'tags' => 'nullable|array',
+            'tags.*' => 'nullable|string'
+        ]);
+
+        // Track old data for revision
+        $oldData = $talkProposal->only(['title', 'description']);
+
+        // File upload handling
+        if ($request->hasFile('presentation_pdf')) {
+            if ($talkProposal->presentation_pdf) {
+                Storage::delete('public/' . $talkProposal->presentation_pdf);
+            }
+            $validated['presentation_pdf'] = $request->file('presentation_pdf')->store('presentations', 'public');
+        }
+
+        // Update model
+        $talkProposal->update($validated);
+
+        // Track new data for revision
+        $newData = $talkProposal->only(['title', 'description']);
+        $changes = array_diff_assoc($newData, $oldData);
+
+        // Store revision if any field changed
+        if (!empty($changes)) {
+            $talkProposal->revisions()->create([
+                'user_id' => auth()->id(),
+                'changes' => $changes,
+            ]);
+        }
+
+        // Sync tags
+        $tagNames = collect($request->input('tags', []))
+            ->filter()
+            ->map(fn($tag) => trim(strtolower($tag)))
+            ->unique();
+
+        if ($tagNames->isNotEmpty()) {
+            $tagIds = $tagNames->map(function ($name) {
+                return \App\Models\Tag::firstOrCreate(['name' => $name])->id;
+            });
+            $talkProposal->tags()->sync($tagIds);
+        }
+
+        return redirect()->route('proposals.show', $talkProposal)->with('success', 'Talk Proposal updated successfully.');
     }
+
 
     /**
      * Remove the specified resource from storage.

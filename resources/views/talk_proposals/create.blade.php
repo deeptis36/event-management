@@ -6,7 +6,7 @@
 @section('content')
     <h1 class="text-2xl font-bold mb-6">Submit a New Talk Proposal</h1>
 
-    <form action="{{ route('talk-proposals.store') }}" method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded shadow">
+    <form action="{{ route('admin.talk-proposals.store') }}" method="POST" enctype="multipart/form-data" class="bg-white p-6 rounded shadow">
         @csrf
 
         <div class="mb-4">

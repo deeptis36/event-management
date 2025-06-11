@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
@@ -26,6 +25,7 @@ class LoginController extends Controller
             'password' => ['required']
         ]);
 
+
         $credentials = $request->only('email', 'password');
 
         if (Auth::attempt($credentials)) {
@@ -33,6 +33,7 @@ class LoginController extends Controller
 
             // Redirect based on role
             $user = Auth::user();
+            $role = $user->getRoleNames()[0];
 
             if ($user->hasRole('admin')) {
                 return redirect()->intended('/admin/dashboard');

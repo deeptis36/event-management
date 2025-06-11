@@ -11,9 +11,13 @@ class TalkProposal extends Model
 
     protected $fillable = ['speaker_id', 'title', 'description', 'status', 'presentation_pdf'];
 
-    public function speaker()
+    /*public function speaker()
     {
         return $this->belongsTo(Speaker::class);
+    }*/
+    public function speaker()
+    {
+        return $this->belongsTo(User::class, 'speaker_id');
     }
 
     public function revisions()
