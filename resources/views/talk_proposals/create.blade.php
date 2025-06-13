@@ -29,7 +29,7 @@
 
         <div class="mb-4">
             <label class="block font-medium">Tags (comma-separated)</label>
-            <input type="text" name="tags[]" class="w-full mt-1 p-2 border rounded" placeholder="e.g. AI, Laravel, Security">
+            <input type="text" name="tags" class="w-full mt-1 p-2 border rounded" placeholder="e.g. AI, Laravel, Security">
             @error('tags') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
         </div>
 

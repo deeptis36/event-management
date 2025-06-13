@@ -9,6 +9,7 @@ class RoleSeeder extends Seeder
 {
     public function run(): void
     {
+
         $roles = ['speaker', 'reviewer', 'admin'];
 
         foreach ($roles as $role) {

@@ -1,66 +1,52 @@
 <?php
 
-namespace App\Http\Controllers\Auth;
+namespace Database\Seeders;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Carbon\Carbon;
 
-class LoginController extends Controller
+class UserSeeder extends Seeder
 {
     /**
-     * Show the login form.
+     * Run the database seeds.
      */
-    public function showLoginForm()
+    public function run(): void
     {
-        return view('auth.login'); // Make sure this view exists
-    }
-
-    /**
-     * Handle login request.
-     */
-    public function login(Request $request)
-    {
-        $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required']
+        // truncate table
+        // DB::table('users')->truncate();
+        DB::table('users')->insert([
+            [
+                'id' => 1,
+                'name' => 'Admin User',
+                'email' => 'eventadmin@yopmail.com',
+                'email_verified_at' => null,
+                'password' => bcrypt('password'),
+                'remember_token' => null,
+                'created_at' => Carbon::parse('2025-05-26 08:56:21'),
+                'updated_at' => Carbon::parse('2025-05-26 08:56:21'),
+            ],
+            [
+                'id' => 2,
+                'name' => 'Reviewer User',
+                'email' => 'reviewer@yopmail.com',
+                'email_verified_at' => null,
+                'password' => bcrypt('password'), // hashed
+                'remember_token' => null,
+                'created_at' => Carbon::parse('2025-05-26 08:56:21'),
+                'updated_at' => Carbon::parse('2025-05-26 08:56:21'),
+            ],
+            [
+                'id' => 3,
+                'name' => 'Speaker User',
+                'email' => 'speaker@yopmail.com',
+                'email_verified_at' => null,
+                'password' => bcrypt('password'),
+                'remember_token' => null,
+                'created_at' => Carbon::parse('2025-05-26 08:56:21'),
+                'updated_at' => Carbon::parse('2025-05-26 08:56:21'),
+            ],
         ]);
-
-        $credentials = $request->only('email', 'password');
-
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
-
-            // Redirect based on role
-            $user = Auth::user();
-
-            if ($user->hasRole('admin')) {
-                return redirect()->intended('/admin/dashboard');
-            } elseif ($user->hasRole('reviewer')) {
-                return redirect()->intended('/reviewer/dashboard');
-            } elseif ($user->hasRole('speaker')) {
-                return redirect()->intended('/speaker/dashboard');
-            }
-
-            // Fallback if no role matched
-            return redirect()->intended('/dashboard');
-        }
-
-        return back()->withErrors([
-            'email' => 'Invalid credentials.',
-        ])->onlyInput('email');
-    }
-
-    /**
-     * Logout the user.
-     */
-    public function logout(Request $request)
-    {
-        Auth::logout();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect('/login');
     }
 }

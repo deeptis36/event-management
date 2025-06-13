@@ -36,8 +36,7 @@ class TalkProposalController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'presentation_pdf' => 'nullable|file|mimes:pdf|max:10240', // 10MB max
-            'tags' => 'nullable|array',
-            'tags.*' => 'string|max:50',
+            'tags' => 'nullable',
         ]);
 
         // $speaker = auth()->user()->speaker ?? abort(403);
@@ -58,7 +57,8 @@ class TalkProposalController extends Controller
         if ($request->filled('tags')) {
             $tagIds = [];
 
-            $tags =  $request->tags;
+            $tags = explode(',', $request->tags);
+            // dd($tags);
             foreach ($tags as $tagName) {
                 $tagName = trim(strtolower($tagName));
                 $tag = Tag::firstOrCreate(['name' => $tagName, 'slug' => Tag::generateSlug($tagName)]);
@@ -107,23 +107,26 @@ class TalkProposalController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'presentation_pdf' => 'nullable|file|mimes:pdf|max:10240',
-            'tags' => 'nullable|array',
-            'tags.*' => 'nullable|string'
+            'tags' => 'nullable'
         ]);
 
         // Track old data for revision
         $oldData = $talkProposal->only(['title', 'description']);
 
+        $update = [ 'title' => $validated['title'],
+            'description' => $validated['description']];
         // File upload handling
         if ($request->hasFile('presentation_pdf')) {
             if ($talkProposal->presentation_pdf) {
                 Storage::delete('public/' . $talkProposal->presentation_pdf);
             }
             $validated['presentation_pdf'] = $request->file('presentation_pdf')->store('presentations', 'public');
+            $update['presentation_pdf'] = $validated['presentation_pdf'];
         }
 
+        // dd($validated,$talkProposal);
         // Update model
-        $talkProposal->update($validated);
+        $talkProposal->update($update);
 
         // Track new data for revision
         $newData = $talkProposal->only(['title', 'description']);
@@ -138,17 +141,30 @@ class TalkProposalController extends Controller
         }
 
         // Sync tags
-        $tagNames = collect($request->input('tags', []))
-            ->filter()
-            ->map(fn($tag) => trim(strtolower($tag)))
-            ->unique();
+        $tagNames = explode(',', $request->tags);
 
-        if ($tagNames->isNotEmpty()) {
-            $tagIds = $tagNames->map(function ($name) {
-                return \App\Models\Tag::firstOrCreate(['name' => $name])->id;
-            });
+        $exisitingTags = Tag::get()->pluck('name');
+            // dd($tagNames);
+        if (!empty($tagNames) ) {
+            $tagIds = [];
+
+            foreach ($tagNames as $tagName) {
+                $tagName = trim(strtolower($tagName));
+                if (in_array($tagName, $exisitingTags)) {
+                    continue;
+                }
+                $tag = Tag::create(['name' => $tagName, 'slug' => Tag::generateSlug($tagName)]);
+                $tagIds[] = $tag->id;
+            }
             $talkProposal->tags()->sync($tagIds);
         }
+
+         // Log initial revision
+        TalkProposalRevision::create([
+            'talk_proposal_id' => $talkProposal->id,
+            'user_id' => auth()->id(),
+            'changes' => json_encode(['UPDATED' => $talkProposal->toArray()]),
+        ]);
 
         return redirect()->route('proposals.show', $talkProposal)->with('success', 'Talk Proposal updated successfully.');
     }

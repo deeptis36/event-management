@@ -44,7 +44,7 @@ Route::middleware(['auth'])->group(function () {
     // Proposals
     Route::get('/proposals', [TalkProposalController::class, 'index'])->name('proposals.index');
     Route::post('admin/store-proposals', [TalkProposalController::class, 'store'])->name('admin.talk-proposals.store');
-    Route::put('admin/update-proposals', [TalkProposalController::class, 'store'])->name('admin.talk-proposals.update');
+    Route::put('admin/update-proposals/{proposal}', [TalkProposalController::class, 'update'])->name('admin.talk-proposals.update');
     Route::get('/proposals/{proposal}', [TalkProposalController::class, 'show'])->name('proposals.show');
     Route::get('admin/users', [UserController::class, 'index'])->name('admin.users.index');
     Route::get('admin/reviews', [ReviewController::class, 'index'])->name('admin.reviews.index');
